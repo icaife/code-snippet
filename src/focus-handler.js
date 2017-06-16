@@ -1,6 +1,6 @@
 /**
  * 焦点处理
- * @author Leo
+ * @author Leon
  */
 "use strict";
 var $ = require("jquery");

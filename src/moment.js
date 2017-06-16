@@ -308,7 +308,7 @@ $.extend(Moment.prototype, {
         return date instanceof Date;
     },
     isObj: function(obj) {
-        return "[object Object]" === Object.prototype.toString.call(obj);
+        return "[object Object]" === ({}).toString.call(obj);
     },
     isString: function(str) {
         return typeof str === "string";

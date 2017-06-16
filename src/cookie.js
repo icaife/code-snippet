@@ -15,7 +15,7 @@ function cookie() {
 /**
  * [cookie.get description]
  * @param  {String} key [description]
- * @return {String}     [description]
+ * @return {String|Object}     [description]
  */
 cookie.get = function(key) {
     var result = "";
@@ -62,7 +62,7 @@ cookie.get = function(key) {
  * @param  {String} key   [description]
  * @param  {String|Number|Object|Array} value [description]
  * @param  {Object} attrs
- * @return {String}       [description]
+ * @return {Boolean|String}       [description]
  */
 cookie.set = function(key, value, attrs) {
     if (!key) {

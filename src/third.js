@@ -9,8 +9,8 @@
  *         |-util
  *         |-dom
  *         |-page
- *         |-scripts
- *         |-
+ *         |-send
+ *         |-event
  */
 
 (function(root, factory) {
@@ -314,8 +314,8 @@
             document.write = function(html) {
                 var c = document.createElement("b");
 
-                writeContainer.appendChild(c);
                 c.innerHTML = html;
+                writeContainer.appendChild(c);
             };
 
             node.async = true;
@@ -503,7 +503,7 @@
     /**
      * @description get page info
      */
-    function getPageInfo(custom) {
+    function page(custom) {
         var page = {
                 home: "home",
                 list: "list",
@@ -513,7 +513,7 @@
                 order: "order",
                 other: "other"
             },
-            custom = getCustom(custom),
+            custom = page.custom(custom),
             defaults = {
                 platform: /tufengwang/.test(window.location.hostname) ? "pinyin" : (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i).test(window.navigator.userAgent) ? "mobile" : "pc",
                 protocol: window.location.protocol.replace(/[^\w]/g, ""),
@@ -528,7 +528,7 @@
      * @param  {[type]} o [description]
      * @return {[type]}   [description]
      */
-    function getCustom(custom) {
+    page.custom = function custom(custom) {
         if (!custom) {
             return {};
         }
@@ -550,10 +550,19 @@
         return {};
     }
 
+    function send() {}
+
+    function event(eventType, handler) {}
+
+    event.on = function() {};
+    event.emit = function() {};
+
     return {
         util: util,
         dom: dom,
-        page: getPageInfo(custom),
+        send: send,
+        event: event,
+        page: page(custom),
         loaded: true
     };
 }));

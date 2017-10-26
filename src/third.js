@@ -9,48 +9,47 @@
  *         |-util
  *         |-dom
  *         |-page
- *         |-send
+ *         |-push
  *         |-event
  */
 
-(function(root, factory) {
-    var name = "TFF_THIRD",
-        instance = root[name];
+(function(window, factory) {
+    var DEBUG_FLAG = "TFF_THIRD_DEBUG",
+        DATA_LAYER = "TFF_THIRD_DATA_LAYER",
+        NAME = "TFF_THIRD";
+
+    var instance = window[NAME],
+        dataLayer = window[DATA_LAYER] = window[DATA_LAYER] || [];
 
     if (instance && instance.loaded) { //loaded,just return
         return false;
     }
 
-    instance.debug = window.location.hash === "#TFF_THIRD_DEBUG";
+    instance.debug = window.location.hash === ("#" + DEBUG_FLAG);
 
-    var third = root[name] = factory(window, document, instance),
+    var third = window[NAME] = factory(window, document, instance),
         scripts = getScripts(third.page),
-        customScripts = third.page.scripts;
+        util = third.util,
+        event = third.event;
 
-    var count = 0;
-    var fn = function(e) {
-        console.log("click->", count);
-        if (count++ === 4) {
-            third.dom.fire(document, "click", fn);
-            console.log("fire event ");
-        }
-    };
+    //load scripts
+    util.loadScript(scripts, function() {
+        event.emit("load", "加载成功");
+    });
 
-    third.dom.bind(document, "click", "button", fn);
-
-    if (customScripts) { //load custom scripts
-        [].push.apply(scripts, [].concat(customScripts));
-    }
-
-    third.util.loadScript(scripts);
+    event.on("load", function(data) {
+        console.log(data);
+    });
 
     /**
      * @description get scripts
      */
     function getScripts(page) {
-        var scripts = {
+
+        var data = page.data,
+            scripts = {
                 /**
-                 * @see  https://developers.google.com/analytics/devguides/collection/analyticsjs/
+                 * @see https://developers.google.com/analytics/devguides/collection/analyticsjs/
                  * @see https://developers.google.com/analytics/devguides/collection/upgrade/reference/gajs-analyticsjs
                  */
                 "google.analytics": {
@@ -79,7 +78,7 @@
                         ga("create", this.account[page.platform], "auto");
                         ga("send", "pageview");
 
-                        if (/order/.test(page.pageType)) { //if order ,require ecommerce plugin
+                        if (/order/.test(page.type)) { //if order ,require ecommerce plugin
                             /**
                              * @see https://developers.google.com/analytics/devguides/collection/analyticsjs/ecommerce
                              */
@@ -87,8 +86,11 @@
                         }
                     }
                 },
+                /**
+                 * @see https://support.google.com/tagmanager/?hl=zh-Hans#topic=3441530
+                 */
                 "google.tag-manager": {
-                    src: "//www.googletagmanager.com/gtm.js?id=GTM-MZNNRG&l=GTM_DATA_LAYER",
+                    src: "//www.googletagmanager.com/gtm.js?id=GTM-MZNNRG&l=" + DATA_LAYER,
                     scope: {
                         platform: /./, //all platforms
                         page: /./ //all page
@@ -97,39 +99,68 @@
 
                     }
                 },
-                // "google.conversion.remarketing": {
-                //     src: "//www.googleadservices.com/pagead/conversion.js",
-                //     account: {
-                //         pc: 939794248
-                //     },
-                //     scope: {
-                //         platform: /./, //all platforms
-                //         page: /payment/ //all page
-                //     },
-                //     // html: "<noscript>" +
-                //     //     "<div style=\"display:inline;\">" +
-                //     //     "<img height=\"1\" width=\"1\" style=\"border-style:none;\" alt=\"\" src=\"//googleads.g.doubleclick.net/pagead/viewthroughconversion/939794248/?guid=ON&amp;script=0\"/>" +
-                //     //     "</div></noscript>",
-                //     before: function() {
-                //         var google_tag_params = window.google_tag_params = {
-                //             dynx_itemid: "REPLACE_WITH_VALUE", //product id
-                //             dynx_itemid2: "REPLACE_WITH_VALUE", //product id 2
-                //             dynx_pagetype: "REPLACE_WITH_VALUE", //page type
-                //             dynx_totalvalue: "REPLACE_WITH_VALUE", //total price
-                //             travel_destid: "REPLACE_WITH_VALUE", //dest id
-                //             travel_originid: "REPLACE_WITH_VALUE", //start id
-                //             travel_startdate: "REPLACE_WITH_VALUE", //start date
-                //             travel_enddate: "REPLACE_WITH_VALUE", //end date
-                //             travel_pagetype: "REPLACE_WITH_VALUE", //page type
-                //             travel_totalvalue: "REPLACE_WITH_VALUE" //total price
-                //         };
+                /**
+                 * @see https://developers.google.com/adwords-remarketing-tag/parameters
+                 */
+                "google.adwords.remarketing": {
+                    src: "" /*"//www.googleadservices.com/pagead/conversion.js"*/ ,
+                    account: {
+                        pc: 939794248
+                    },
+                    scope: {
+                        platform: /./, //all platforms
+                        page: /./ //all page
+                    },
+                    // html: "<noscript>" +
+                    //     "<div style=\"display:inline;\">" +
+                    //     "<img height=\"1\" width=\"1\" style=\"border-style:none;\" alt=\"\" src=\"//googleads.g.doubleclick.net/pagead/viewthroughconversion/939794248/?guid=ON&amp;script=0\"/>" +
+                    //     "</div></noscript>",
+                    before: function() {
+                        var map = {
+                            home: "home",
+                            list: "searchresults",
+                            detail: "offerdetail",
+                            other: "other",
+                            order: "conversionintent",
+                            payment: "conversion",
+                            undefined: "other"
+                        };
 
-                //         var google_conversion_id = window.google_conversion_id = this.account.pc;
-                //         var google_custom_params = window.google_custom_params = window.google_tag_params;
-                //         var google_remarketing_only = window.google_remarketing_only = true;
-                //     }
-                // },
-                // "google.conversion.translate": {
+                        var params = {
+                            dynx_itemid: "", //product id
+                            dynx_itemid2: "", //product id 2
+                            dynx_pagetype: map[page.type], //page type
+                            dynx_totalvalue: 0, //total price
+                            travel_destid: "", //dest id
+                            travel_originid: "", //start id
+                            travel_startdate: "", //start date
+                            travel_enddate: "", //end date
+                            travel_pagetype: map[page.type], //page type
+                            travel_totalvalue: 0 //total price
+                        }
+
+                        if (page.type === "detail") {
+                            var product = page.data.product;
+
+                            if (product) {
+                                params.dynx_itemid = product.productId;
+                                params.travel_totalvalue = params.travel_totalvalue = product.price;
+                            }
+                        }
+
+                        util.extend(window, {
+                            google_tag_params: params,
+                            google_conversion_id: this.account.pc,
+                            google_custom_params: params,
+                            google_remarketing_only: true
+                        });
+
+                        window[DATA_LAYER].push({
+                            "google.adwords.remarketing": params
+                        });
+                    }
+                },
+                // "google.adwords.conversion": {
                 //     src: "//www.googleadservices.com/pagead/conversion.js",
                 //     account: {
                 //         pc: 939794248
@@ -246,7 +277,7 @@
             var item = scripts[key],
                 scope = item.scope;
 
-            if (scripts.hasOwnProperty(key) && scope.platform.test(page.platform) && scope.page.test(page.pageType)) {
+            if (scripts.hasOwnProperty(key) && scope.platform.test(page.platform) && scope.page.test(page.type)) {
                 result.push(item);
             }
         }
@@ -345,6 +376,10 @@
                 script = args[0],
                 callback = (util.isFunction(args[args.length - 1]) && args.splice(-1, 1)[0]) || util.noop;
 
+            if (!loadScript) {
+                return;
+            }
+
             if (args.length > 1) {
                 loadScript(args, callback);
             } else {
@@ -356,16 +391,21 @@
                         util.isFunction(script.callback) && script.callback();
                         callback();
                     });
+
+                    if (!script.src) {
+                        callback();
+                    }
                 } else if (util.type(script) === "array") {
                     var count = 0;
                     for (var i = 0, len = script.length; i < len; i++) {
                         var item = script[i];
 
                         loadScript(item, function() {
-                            if (++count == len) {
+                            if (++count === len) {
                                 callback();
                             }
                         });
+
                     }
                 }
             }
@@ -399,14 +439,22 @@
                     var item = o[key];
 
                     if (o.hasOwnProperty(key)) {
-                        cb.apply(item, [key, item]);
+                        var flag = cb.apply(item, [key, item]);
+
+                        if (flag === false) {
+                            break;
+                        }
                     }
                 }
             } else if (util.type(o) === "array") {
                 for (var i = 0, len = o.length; i < len; i++) {
                     var item = o[i];
 
-                    cb.apply(item, [i, item]);
+                    var flag = cb.apply(item, [i, item]);
+
+                    if (flag === false) {
+                        break;
+                    }
                 }
             }
         },
@@ -504,7 +552,7 @@
      * @description get page info
      */
     function page(custom) {
-        var page = {
+        var pageMap = {
                 home: "home",
                 list: "list",
                 detail: "detail",
@@ -517,10 +565,13 @@
             defaults = {
                 platform: /tufengwang/.test(window.location.hostname) ? "pinyin" : (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i).test(window.navigator.userAgent) ? "mobile" : "pc",
                 protocol: window.location.protocol.replace(/[^\w]/g, ""),
-                pageType: page.other
-            };
+                type: pageMap.other
+            },
+            pageInfo = util.extend(true, defaults, custom);
 
-        return util.extend(true, defaults, custom);
+        pageInfo.data = pageInfo.data || {};
+
+        return pageInfo;
     }
 
     /**
@@ -550,19 +601,146 @@
         return {};
     }
 
-    function send() {}
+    function push() {
 
-    function event(eventType, handler) {}
+    }
 
-    event.on = function() {};
-    event.emit = function() {};
+    /**
+     * event emitter
+     * @param  {String} eventType [description]
+     * @param  {Function} handler   [description]
+     * @param  {String} key   for find handler
+     * @return {[type]}           [description]
+     */
+    function event(eventType, handler, key) {
+        // event.on(eventType, handler, key);
+    }
+
+    event.events = {};
+    event.uuid = 0;
+    /**
+     * event on
+     * @param  {String} eventType [description]
+     * @param  {Function} handler   [description]
+     * @param  {String} key       [description]
+     * @param  {Number} times     [description]
+     * @return {[type]}           [description]
+     */
+    event.on = function(eventType, handler, key, times) {
+        if (arguments.length < 2) {
+            return;
+        }
+
+        var events = this.events,
+            item = events[eventType];
+
+        if (!item) {
+            item = events[eventType] = [];
+        }
+
+        if (key) {
+            handler.key = key;
+        }
+
+        item.push({
+            handler: handler,
+            times: times > 0 ? times : -1,
+            uuid: key || this.uuid++ //if no key
+        });
+
+        return this;
+    };
+    /**
+     * event once
+     * @param  {String} eventType [description]
+     * @param  {Function} handler   [description]
+     * @return {[type]}           [description]
+     */
+    event.once = function(eventType, handler) {
+        this.on(eventType, handler, this.uuid++, 1);
+        return this;
+    };
+
+    /**
+     * @param  {[type]} eventType [description]
+     * @param  {[type]} handler   [description]
+     * @return {[type]}           [description]
+     */
+    event.emit = function(eventType) {
+        var that = this,
+            events = this.get(eventType),
+            args = [].slice.call(arguments, 1);
+
+        events && util.each(events, function(index, item) {
+            item.handler.apply(item, args);
+            item.times > 0 && item.times--;
+
+            if (item.times == 0) {
+                that.off(eventType, item.uuid);
+            }
+        });
+
+        return this;
+    };
+
+    /**
+     * event get
+     * @param  {String} eventType [description]
+     * @param  {String|Function} key or handler       [description]
+     * @return {[type]}           [description]
+     */
+    event.get = function(eventType, key) {
+        var events = this.events,
+            items = events[eventType],
+            result = items;
+
+        if (key) {
+            util.each(items, function(index, item) {
+                if (item.uuid === key || item.handler === key) {
+                    result = item;
+                    return false;
+                }
+            });
+        }
+
+        return result || null;
+    };
+
+    /**
+     * event off
+     * @param  {String} eventType [description]
+     * @param  {Function|String} handler or key
+     * @return {[type]}           [description]
+     */
+    event.off = function(eventType, handler) {
+        var that = this;
+        if (!arguments.length) { //clear all event
+            that.events = {};
+        } else if (arguments.length === 1) { //clear all eventEvent
+            var items = that.get(eventType);
+            items.length = 0;
+        } else {
+            var items = this.get(eventType);
+
+            if (items) {
+                util.each(items, function(item, index) {
+                    if (item.uuid === handler || item.handler === handler) {
+                        items.splice(index, 1);
+                        return false;
+                    }
+                });
+            }
+        }
+
+        return this;
+    };
 
     return {
         util: util,
         dom: dom,
-        send: send,
         event: event,
         page: page(custom),
-        loaded: true
+        loaded: true,
+        push: push
     };
 }));

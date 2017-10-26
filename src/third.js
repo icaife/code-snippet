@@ -34,10 +34,11 @@
 
     //load scripts
     util.loadScript(scripts, function() {
-        event.emit("load", "加载成功");
+        event.emit("load", "加载成功0");
+        event.emit("load", "加载成功1");
     });
 
-    event.on("load", function(data) {
+    event.once("load", function(data) {
         console.log(data);
     });
 
@@ -632,17 +633,17 @@
         }
 
         var events = this.events,
-            item = events[eventType];
+            items = events[eventType];
 
-        if (!item) {
-            item = events[eventType] = [];
+        if (!items) {
+            items = events[eventType] = [];
         }
 
         if (key) {
             handler.key = key;
         }
 
-        item.push({
+        items.push({
             handler: handler,
             times: times > 0 ? times : -1,
             uuid: key || this.uuid++ //if no key
@@ -718,12 +719,13 @@
             that.events = {};
         } else if (arguments.length === 1) { //clear all eventEvent
             var items = that.get(eventType);
+
             items.length = 0;
         } else {
             var items = this.get(eventType);
 
             if (items) {
-                util.each(items, function(item, index) {
+                util.each(items, function(index, item) {
                     if (item.uuid === handler || item.handler === handler) {
                         items.splice(index, 1);
                         return false;

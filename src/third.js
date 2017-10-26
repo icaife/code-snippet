@@ -32,21 +32,10 @@
         util = third.util,
         event = third.event;
 
-    //load scripts
-    util.loadScript(scripts, function() {
-        event.emit("load", "加载成功0");
-        event.emit("load", "加载成功1");
-    });
-
-    event.once("load", function(data) {
-        console.log(data);
-    });
-
     /**
      * @description get scripts
      */
     function getScripts(page) {
-
         var data = page.data,
             scripts = {
                 /**
@@ -85,6 +74,9 @@
                              */
                             ga("require", "ecommerce");
                         }
+                    },
+                    callback: function() {
+
                     }
                 },
                 /**
@@ -602,9 +594,16 @@
         return {};
     }
 
-    function push() {
+    function push(action, data) {
 
     }
+
+    push.actions = {
+        pageview: "pageview", //page view
+        trans: "trans", //order
+        addItem: "addItem", //add item
+        interact: "interact" //interact
+    };
 
     /**
      * event emitter

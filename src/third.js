@@ -238,8 +238,8 @@
                         page: /./
                     }
                 },
-                "mediav": {
-                    src: page.protocol === "http" ? "http://static.mediav.com/mvl.js" : "https://static-ssl.mediav.com/mvl.js",
+                "360.union": {
+                    src: page.protocol === "//s.union.360.cn/79797.js",
                     scope: {
                         platform: /./,
                         page: /./
@@ -343,6 +343,7 @@
             };
 
             node.async = true;
+            node.defer = true;
             node.onload = node.onerror = onreadystatechange = function() {
                 if (/loaded|complete/.test(this.readyState || "loaded" /*firefox*/ )) {
                     util.isFunction(callback) && callback(node);
